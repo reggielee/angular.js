@@ -111,11 +111,11 @@ To configure the `$location` service, retrieve the
 
 - **hashPrefix(prefix)**: `{string}`<br />
   Prefix used for Hashbang URLs (used in Hashbang mode or in legacy browsers in HTML5 mode).<br />
-  Default: `'!'`
+  Default: `''`
 
 ### Example configuration
 ```js
-$locationProvider.html5Mode(true).hashPrefix('*');
+$locationProvider.html5Mode(true).hashPrefix('!');
 ```
 
 ## Getter and setter methods

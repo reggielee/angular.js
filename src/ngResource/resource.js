@@ -132,12 +132,9 @@ function shallowClearAndCopy(src, dst) {
  *   Note that the parameter will be ignored, when calling a "GET" action method (i.e. an action
  *   method that does not accept a request body)
  *
- * @param {Object.<Object>=} actions Hash with declaration of custom actions that will be available
- *   in addition to the default set of resource actions (see below). If a custom action has the same
- *   key as a default action (e.g. `save`), then the default action will be *overwritten*, and not
- *   extended.
- *
- *   The declaration should be created in the format of {@link ng.$http#usage $http.config}:
+ * @param {Object.<Object>=} actions Hash with declaration of custom actions that should extend
+ *   the default set of resource actions. The declaration should be created in the format of {@link
+ *   ng.$http#usage $http.config}:
  *
  *       {action1: {method:?, params:?, isArray:?, headers:?, ...},
  *        action2: {method:?, params:?, isArray:?, headers:?, ...},
@@ -519,15 +516,52 @@ angular.module('ngResource', ['ng']).
     this.$get = ['$http', '$log', '$q', '$timeout', function($http, $log, $q, $timeout) {
 
       var noop = angular.noop,
-          forEach = angular.forEach,
-          extend = angular.extend,
-          copy = angular.copy,
-          isArray = angular.isArray,
-          isDefined = angular.isDefined,
-          isFunction = angular.isFunction,
-          isNumber = angular.isNumber,
-          encodeUriQuery = angular.$$encodeUriQuery,
-          encodeUriSegment = angular.$$encodeUriSegment;
+        forEach = angular.forEach,
+        extend = angular.extend,
+        copy = angular.copy,
+        isArray = angular.isArray,
+        isDefined = angular.isDefined,
+        isFunction = angular.isFunction,
+        isNumber = angular.isNumber;
+
+      /**
+       * We need our custom method because encodeURIComponent is too aggressive and doesn't follow
+       * http://www.ietf.org/rfc/rfc3986.txt with regards to the character set
+       * (pchar) allowed in path segments:
+       *    segment       = *pchar
+       *    pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
+       *    pct-encoded   = "%" HEXDIG HEXDIG
+       *    unreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~"
+       *    sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
+       *                     / "*" / "+" / "," / ";" / "="
+       */
+      function encodeUriSegment(val) {
+        return encodeUriQuery(val, true).
+          replace(/%26/gi, '&').
+          replace(/%3D/gi, '=').
+          replace(/%2B/gi, '+');
+      }
+
+
+      /**
+       * This method is intended for encoding *key* or *value* parts of query component. We need a
+       * custom method because encodeURIComponent is too aggressive and encodes stuff that doesn't
+       * have to be encoded per http://tools.ietf.org/html/rfc3986:
+       *    query       = *( pchar / "/" / "?" )
+       *    pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
+       *    unreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~"
+       *    pct-encoded   = "%" HEXDIG HEXDIG
+       *    sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
+       *                     / "*" / "+" / "," / ";" / "="
+       */
+      function encodeUriQuery(val, pctEncodeSpaces) {
+        return encodeURIComponent(val).
+          replace(/%40/gi, '@').
+          replace(/%3A/gi, ':').
+          replace(/%24/g, '$').
+          replace(/%2C/gi, ',').
+          replace(/%20/g, (pctEncodeSpaces ? '%20' : '+'));
+      }
 
       function Route(template, defaults) {
         this.template = template;
@@ -543,7 +577,7 @@ angular.module('ngResource', ['ng']).
             encodedVal,
             protocolAndDomain = '';
 
-          var urlParams = self.urlParams = Object.create(null);
+          var urlParams = self.urlParams = {};
           forEach(url.split(/\W/), function(param) {
             if (param === 'hasOwnProperty') {
               throw $resourceMinErr('badname', 'hasOwnProperty is not a valid parameter name.');
@@ -701,8 +735,6 @@ angular.module('ngResource', ['ng']).
               defaultResponseInterceptor;
             var responseErrorInterceptor = action.interceptor && action.interceptor.responseError ||
               undefined;
-            var hasError = !!error;
-            var hasResponseErrorInterceptor = !!responseErrorInterceptor;
             var timeoutDeferred;
             var numericTimeoutPromise;
 
@@ -765,9 +797,12 @@ angular.module('ngResource', ['ng']).
               response.resource = value;
 
               return response;
+            }, function(response) {
+              (error || noop)(response);
+              return $q.reject(response);
             });
 
-            promise = promise['finally'](function() {
+            promise['finally'](function() {
               value.$resolved = true;
               if (!isInstanceCall && cancellable) {
                 value.$cancelRequest = noop;
@@ -782,19 +817,7 @@ angular.module('ngResource', ['ng']).
                 (success || noop)(value, response.headers, response.status, response.statusText);
                 return value;
               },
-              (hasError || hasResponseErrorInterceptor) ?
-              function(response) {
-                if (hasError) error(response);
-                return hasResponseErrorInterceptor ?
-                    responseErrorInterceptor(response) :
-                    $q.reject(response);
-              } :
-              undefined);
-            if (hasError && !hasResponseErrorInterceptor) {
-              // Avoid `Possibly Unhandled Rejection` error,
-              // but still fulfill the returned promise with a rejection
-              promise.catch(noop);
-            }
+              responseErrorInterceptor);
 
             if (!isInstanceCall) {
               // we are creating instance / collection
@@ -802,18 +825,13 @@ angular.module('ngResource', ['ng']).
               // - return the instance / collection
               value.$promise = promise;
               value.$resolved = false;
-              if (cancellable) value.$cancelRequest = cancelRequest;
+              if (cancellable) value.$cancelRequest = timeoutDeferred.resolve;
 
               return value;
             }
 
             // instance call
             return promise;
-
-            function cancelRequest(value) {
-              promise.catch(noop);
-              timeoutDeferred.resolve(value);
-            }
           };
 
 

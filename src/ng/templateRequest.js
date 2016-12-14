@@ -60,59 +60,53 @@ function $TemplateRequestProvider() {
    *
    * @property {number} totalPendingRequests total amount of pending template requests being downloaded.
    */
-  this.$get = ['$exceptionHandler', '$templateCache', '$http', '$q', '$sce',
-    function($exceptionHandler, $templateCache, $http, $q, $sce) {
+  this.$get = ['$templateCache', '$http', '$q', '$sce', function($templateCache, $http, $q, $sce) {
 
-      function handleRequestFn(tpl, ignoreRequestError) {
-        handleRequestFn.totalPendingRequests++;
+    function handleRequestFn(tpl, ignoreRequestError) {
+      handleRequestFn.totalPendingRequests++;
 
-        // We consider the template cache holds only trusted templates, so
-        // there's no need to go through whitelisting again for keys that already
-        // are included in there. This also makes Angular accept any script
-        // directive, no matter its name. However, we still need to unwrap trusted
-        // types.
-        if (!isString(tpl) || isUndefined($templateCache.get(tpl))) {
-          tpl = $sce.getTrustedResourceUrl(tpl);
-        }
-
-        var transformResponse = $http.defaults && $http.defaults.transformResponse;
-
-        if (isArray(transformResponse)) {
-          transformResponse = transformResponse.filter(function(transformer) {
-            return transformer !== defaultHttpResponseTransform;
-          });
-        } else if (transformResponse === defaultHttpResponseTransform) {
-          transformResponse = null;
-        }
-
-        return $http.get(tpl, extend({
-            cache: $templateCache,
-            transformResponse: transformResponse
-          }, httpOptions))
-          .finally(function() {
-            handleRequestFn.totalPendingRequests--;
-          })
-          .then(function(response) {
-            $templateCache.put(tpl, response.data);
-            return response.data;
-          }, handleError);
-
-        function handleError(resp) {
-          if (!ignoreRequestError) {
-            resp = $templateRequestMinErr('tpload',
-                'Failed to load template: {0} (HTTP status: {1} {2})',
-                tpl, resp.status, resp.statusText);
-
-            $exceptionHandler(resp);
-          }
-
-          return $q.reject(resp);
-        }
+      // We consider the template cache holds only trusted templates, so
+      // there's no need to go through whitelisting again for keys that already
+      // are included in there. This also makes Angular accept any script
+      // directive, no matter its name. However, we still need to unwrap trusted
+      // types.
+      if (!isString(tpl) || isUndefined($templateCache.get(tpl))) {
+        tpl = $sce.getTrustedResourceUrl(tpl);
       }
 
-      handleRequestFn.totalPendingRequests = 0;
+      var transformResponse = $http.defaults && $http.defaults.transformResponse;
 
-      return handleRequestFn;
+      if (isArray(transformResponse)) {
+        transformResponse = transformResponse.filter(function(transformer) {
+          return transformer !== defaultHttpResponseTransform;
+        });
+      } else if (transformResponse === defaultHttpResponseTransform) {
+        transformResponse = null;
+      }
+
+      return $http.get(tpl, extend({
+          cache: $templateCache,
+          transformResponse: transformResponse
+        }, httpOptions)
+        )['finally'](function() {
+          handleRequestFn.totalPendingRequests--;
+        })
+        .then(function(response) {
+          $templateCache.put(tpl, response.data);
+          return response.data;
+        }, handleError);
+
+      function handleError(resp) {
+        if (!ignoreRequestError) {
+          throw $templateRequestMinErr('tpload', 'Failed to load template: {0} (HTTP status: {1} {2})',
+            tpl, resp.status, resp.statusText);
+        }
+        return $q.reject(resp);
+      }
     }
-  ];
+
+    handleRequestFn.totalPendingRequests = 0;
+
+    return handleRequestFn;
+  }];
 }

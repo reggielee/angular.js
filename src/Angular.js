@@ -88,7 +88,6 @@
   getBlockNodes,
   hasOwnProperty,
   createMap,
-  stringify,
 
   NODE_TYPE_ELEMENT,
   NODE_TYPE_ATTRIBUTE,
@@ -244,7 +243,9 @@ function forEach(obj, iterator, context) {
   if (obj) {
     if (isFunction(obj)) {
       for (key in obj) {
-        if (key !== 'prototype' && key !== 'length' && key !== 'name' && obj.hasOwnProperty(key)) {
+        // Need to check if hasOwnProperty exists,
+        // as on IE8 the result of querySelectorAll is an object without a hasOwnProperty function
+        if (key !== 'prototype' && key !== 'length' && key !== 'name' && (!obj.hasOwnProperty || obj.hasOwnProperty(key))) {
           iterator.call(context, obj[key], key, obj);
         }
       }
@@ -1414,7 +1415,7 @@ function encodeUriSegment(val) {
  * This method is intended for encoding *key* or *value* parts of query component. We need a custom
  * method because encodeURIComponent is too aggressive and encodes stuff that doesn't have to be
  * encoded per http://tools.ietf.org/html/rfc3986:
- *    query         = *( pchar / "/" / "?" )
+ *    query       = *( pchar / "/" / "?" )
  *    pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
  *    unreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~"
  *    pct-encoded   = "%" HEXDIG HEXDIG
@@ -1946,27 +1947,6 @@ function getBlockNodes(nodes) {
  */
 function createMap() {
   return Object.create(null);
-}
-
-function stringify(value) {
-  if (value == null) { // null || undefined
-    return '';
-  }
-  switch (typeof value) {
-    case 'string':
-      break;
-    case 'number':
-      value = '' + value;
-      break;
-    default:
-      if (hasCustomToString(value) && !isArray(value) && !isDate(value)) {
-        value = value.toString();
-      } else {
-        value = toJson(value);
-      }
-  }
-
-  return value;
 }
 
 var NODE_TYPE_ELEMENT = 1;

@@ -152,7 +152,7 @@ describe('$$AnimateRunner', function() {
 
     var runner = new $$AnimateRunner();
     var animationFailed = false;
-    runner.catch(function() {
+    runner['catch'](function() {
       animationFailed = true;
     });
     runner.cancel();
@@ -161,13 +161,14 @@ describe('$$AnimateRunner', function() {
   }));
 
   it('should use timeouts to trigger async operations when the document is hidden', function() {
-    var hidden = true;
+    var doc;
 
     module(function($provide) {
-
-      $provide.value('$$isDocumentHidden', function() {
-        return hidden;
+      doc = jqLite({
+        body: window.document.body,
+        hidden: true
       });
+      $provide.value('$document', doc);
     });
 
     inject(function($$AnimateRunner, $rootScope, $$rAF, $timeout) {
@@ -181,7 +182,7 @@ describe('$$AnimateRunner', function() {
       $timeout.flush();
       expect(spy).toHaveBeenCalled();
 
-      hidden = false;
+      doc[0].hidden = false;
 
       spy = jasmine.createSpy();
       runner = new $$AnimateRunner();
@@ -201,9 +202,9 @@ describe('$$AnimateRunner', function() {
     inject(function($$AnimateRunner, $rootScope) {
         var runner = new $$AnimateRunner();
         var animationComplete = false;
-        runner.finally(function() {
+        runner['finally'](function() {
           animationComplete = true;
-        }).catch(noop);
+        });
         runner[method]();
         $rootScope.$digest();
         expect(animationComplete).toBe(true);

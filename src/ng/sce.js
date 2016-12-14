@@ -27,13 +27,6 @@ var SCE_CONTEXTS = {
 
 // Helper functions follow.
 
-var UNDERSCORE_LOWERCASE_REGEXP = /_([a-z])/g;
-
-function snakeToCamel(name) {
-  return name
-    .replace(UNDERSCORE_LOWERCASE_REGEXP, fnCamelCaseReplace);
-}
-
 function adjustMatcher(matcher) {
   if (matcher === 'self') {
     return matcher;
@@ -619,8 +612,8 @@ function $SceDelegateProvider() {
  *     .controller('AppController', ['$http', '$templateCache', '$sce',
  *       function AppController($http, $templateCache, $sce) {
  *         var self = this;
- *         $http.get('test_data.json', {cache: $templateCache}).then(function(response) {
- *           self.userComments = response.data;
+ *         $http.get('test_data.json', {cache: $templateCache}).success(function(userComments) {
+ *           self.userComments = userComments;
  *         });
  *         self.explicitlyTrustedHtml = $sce.trustAsHtml(
  *             '<span onmouseover="this.textContent=&quot;Explicitly trusted HTML bypasses ' +
@@ -1061,13 +1054,13 @@ function $SceProvider() {
 
     forEach(SCE_CONTEXTS, function(enumValue, name) {
       var lName = lowercase(name);
-      sce[snakeToCamel('parse_as_' + lName)] = function(expr) {
+      sce[camelCase('parse_as_' + lName)] = function(expr) {
         return parse(enumValue, expr);
       };
-      sce[snakeToCamel('get_trusted_' + lName)] = function(value) {
+      sce[camelCase('get_trusted_' + lName)] = function(value) {
         return getTrusted(enumValue, value);
       };
-      sce[snakeToCamel('trust_as_' + lName)] = function(value) {
+      sce[camelCase('trust_as_' + lName)] = function(value) {
         return trustAs(enumValue, value);
       };
     });

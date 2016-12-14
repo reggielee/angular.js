@@ -139,8 +139,7 @@ var angularFiles = {
       'src/ngSanitize/filter/linky.js'
     ],
     'ngMock': [
-      'src/ngMock/angular-mocks.js',
-      'src/ngMock/browserTrigger.js'
+      'src/ngMock/angular-mocks.js'
     ],
     'ngTouch': [
       'src/ngTouch/touch.js',
@@ -155,6 +154,7 @@ var angularFiles = {
 
   'angularScenario': [
     'src/ngScenario/Scenario.js',
+    'src/ngScenario/browserTrigger.js',
     'src/ngScenario/Application.js',
     'src/ngScenario/Describe.js',
     'src/ngScenario/Future.js',
@@ -213,6 +213,7 @@ var angularFiles = {
     'build/angular.js',
     '@angularSrcModules',
     'test/modules/no_bootstrap.js',
+    'src/ngScenario/browserTrigger.js',
     'test/helpers/*.js',
     'test/ngAnimate/*.js',
     'test/ngMessageFormat/*.js',

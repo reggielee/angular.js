@@ -84,6 +84,7 @@ describe('$aria', function() {
     });
   });
 
+
   describe('aria-hidden when disabled', function() {
     beforeEach(configAriaProvider({
       ariaHidden: false
@@ -114,40 +115,14 @@ describe('$aria', function() {
     });
 
     it('should attach itself to custom checkbox', function() {
-      compileElement('<div role="checkbox" ng-model="val"></div>');
+      compileElement('<div role="checkbox" ng-model="val">');
 
-      scope.$apply('val = "checked"');
+      scope.$apply('val = true');
       expect(element.attr('aria-checked')).toBe('true');
 
-      scope.$apply('val = null');
+      scope.$apply('val = false');
       expect(element.attr('aria-checked')).toBe('false');
     });
-
-    it('should use `$isEmpty()` to determine if the checkbox is checked',
-      function() {
-        compileElement('<div role="checkbox" ng-model="val"></div>');
-        var ctrl = element.controller('ngModel');
-        ctrl.$isEmpty = function(value) {
-          return value === 'not-checked';
-        };
-
-        scope.$apply('val = true');
-        expect(ctrl.$modelValue).toBe(true);
-        expect(element.attr('aria-checked')).toBe('true');
-
-        scope.$apply('val = false');
-        expect(ctrl.$modelValue).toBe(false);
-        expect(element.attr('aria-checked')).toBe('true');
-
-        scope.$apply('val = "not-checked"');
-        expect(ctrl.$modelValue).toBe('not-checked');
-        expect(element.attr('aria-checked')).toBe('false');
-
-        scope.$apply('val = "checked"');
-        expect(ctrl.$modelValue).toBe('checked');
-        expect(element.attr('aria-checked')).toBe('true');
-      }
-    );
 
     it('should not handle native checkbox with ngChecked', function() {
       var element = $compile('<input type="checkbox" ng-checked="val">')(scope);
@@ -235,12 +210,11 @@ describe('$aria', function() {
     });
 
     it('should attach itself to role="menuitemcheckbox"', function() {
+      scope.val = true;
       compileElement('<div role="menuitemcheckbox" ng-model="val"></div>');
-
-      scope.$apply('val = "checked"');
       expect(element.attr('aria-checked')).toBe('true');
 
-      scope.$apply('val = null');
+      scope.$apply('val = false');
       expect(element.attr('aria-checked')).toBe('false');
     });
 
@@ -296,19 +270,6 @@ describe('$aria', function() {
 
     it('should not add a role to a native range input', function() {
       compileElement('<input type="range" ng-model="val"/>');
-      expect(element.attr('role')).toBeUndefined();
-    });
-
-    they('should not add role to native $prop controls', {
-      input: '<input type="text" ng-model="val">',
-      select: '<select type="checkbox" ng-model="val"></select>',
-      textarea: '<textarea type="checkbox" ng-model="val"></textarea>',
-      button: '<button ng-click="doClick()"></button>',
-      summary: '<summary ng-click="doClick()"></summary>',
-      details: '<details ng-click="doClick()"></details>',
-      a: '<a ng-click="doClick()"></a>'
-    }, function(tmpl) {
-      var element = $compile(tmpl)(scope);
       expect(element.attr('role')).toBeUndefined();
     });
   });
@@ -707,8 +668,8 @@ describe('$aria', function() {
       var divElement = elements.find('div');
       var liElement = elements.find('li');
 
-      divElement.triggerHandler({type: 'keydown', keyCode: 32});
-      liElement.triggerHandler({type: 'keydown', keyCode: 32});
+      divElement.triggerHandler({type: 'keypress', keyCode: 32});
+      liElement.triggerHandler({type: 'keypress', keyCode: 32});
 
       expect(clickFn).toHaveBeenCalledWith('div');
       expect(clickFn).toHaveBeenCalledWith('li');
@@ -729,57 +690,32 @@ describe('$aria', function() {
       var divElement = elements.find('div');
       var liElement = elements.find('li');
 
-      divElement.triggerHandler({type: 'keydown', which: 32});
-      liElement.triggerHandler({type: 'keydown', which: 32});
+      divElement.triggerHandler({type: 'keypress', which: 32});
+      liElement.triggerHandler({type: 'keypress', which: 32});
 
       expect(clickFn).toHaveBeenCalledWith('div');
       expect(clickFn).toHaveBeenCalledWith('li');
     });
 
-    it('should not bind to key events if there is existing ng-keydown', function() {
-      scope.onClick = jasmine.createSpy('onClick');
-      scope.onKeydown = jasmine.createSpy('onKeydown');
+    it('should not override existing ng-keypress', function() {
+      scope.someOtherAction = function() {};
+      var keypressFn = spyOn(scope, 'someOtherAction');
 
-      var tmpl = '<div ng-click="onClick()" ng-keydown="onKeydown()" tabindex="0"></div>';
-      compileElement(tmpl);
-
-      element.triggerHandler({type: 'keydown', keyCode: 32});
-
-      expect(scope.onKeydown).toHaveBeenCalled();
-      expect(scope.onClick).not.toHaveBeenCalled();
-    });
-
-    it('should not bind to key events if there is existing ng-keypress', function() {
-      scope.onClick = jasmine.createSpy('onClick');
-      scope.onKeypress = jasmine.createSpy('onKeypress');
-
-      var tmpl = '<div ng-click="onClick()" ng-keypress="onKeypress()" tabindex="0"></div>';
-      compileElement(tmpl);
+      scope.someAction = function() {};
+      clickFn = spyOn(scope, 'someAction');
+      compileElement('<div ng-click="someAction()" ng-keypress="someOtherAction()" tabindex="0"></div>');
 
       element.triggerHandler({type: 'keypress', keyCode: 32});
 
-      expect(scope.onKeypress).toHaveBeenCalled();
-      expect(scope.onClick).not.toHaveBeenCalled();
+      expect(clickFn).not.toHaveBeenCalled();
+      expect(keypressFn).toHaveBeenCalled();
     });
 
-    it('should not bind to key events if there is existing ng-keyup', function() {
-      scope.onClick = jasmine.createSpy('onClick');
-      scope.onKeyup = jasmine.createSpy('onKeyup');
-
-      var tmpl = '<div ng-click="onClick()" ng-keyup="onKeyup()" tabindex="0"></div>';
-      compileElement(tmpl);
-
-      element.triggerHandler({type: 'keyup', keyCode: 32});
-
-      expect(scope.onKeyup).toHaveBeenCalled();
-      expect(scope.onClick).not.toHaveBeenCalled();
-    });
-
-    it('should update bindings when keydown is handled', function() {
+    it('should update bindings when keypress handled', function() {
       compileElement('<div ng-click="text = \'clicked!\'">{{text}}</div>');
       expect(element.text()).toBe('');
       spyOn(scope.$root, '$digest').and.callThrough();
-      element.triggerHandler({ type: 'keydown', keyCode: 13 });
+      element.triggerHandler({ type: 'keypress', keyCode: 13 });
       expect(element.text()).toBe('clicked!');
       expect(scope.$root.$digest).toHaveBeenCalledOnce();
     });
@@ -788,14 +724,14 @@ describe('$aria', function() {
       compileElement('<div ng-click="event = $event">{{event.type}}' +
                       '{{event.keyCode}}</div>');
       expect(element.text()).toBe('');
-      element.triggerHandler({ type: 'keydown', keyCode: 13 });
-      expect(element.text()).toBe('keydown13');
+      element.triggerHandler({ type: 'keypress', keyCode: 13 });
+      expect(element.text()).toBe('keypress13');
     });
 
-    it('should not bind keydown to natively interactive elements', function() {
+    it('should not bind keypress to elements not in the default config', function() {
       compileElement('<button ng-click="event = $event">{{event.type}}{{event.keyCode}}</button>');
       expect(element.text()).toBe('');
-      element.triggerHandler({ type: 'keydown', keyCode: 13 });
+      element.triggerHandler({ type: 'keypress', keyCode: 13 });
       expect(element.text()).toBe('');
     });
   });
@@ -812,29 +748,21 @@ describe('$aria', function() {
     });
   });
 
-  describe('actions when bindKeydown is set to false', function() {
+  describe('actions when bindKeypress is set to false', function() {
     beforeEach(configAriaProvider({
-      bindKeydown: false
+      bindKeypress: false
     }));
     beforeEach(injectScopeAndCompiler);
 
-    it('should not trigger click', function() {
-      scope.someAction = jasmine.createSpy('someAction');
+    it('should not a trigger click', function() {
+      scope.someAction = function() {};
+      var clickFn = spyOn(scope, 'someAction');
 
       element = $compile('<div ng-click="someAction()" tabindex="0"></div>')(scope);
 
-      element.triggerHandler({type: 'keydown', keyCode: 13});
-      element.triggerHandler({type: 'keydown', keyCode: 32});
-      element.triggerHandler({type: 'keypress', keyCode: 13});
       element.triggerHandler({type: 'keypress', keyCode: 32});
-      element.triggerHandler({type: 'keyup', keyCode: 13});
-      element.triggerHandler({type: 'keyup', keyCode: 32});
 
-      expect(scope.someAction).not.toHaveBeenCalled();
-
-      element.triggerHandler({type: 'click', keyCode: 32});
-
-      expect(scope.someAction).toHaveBeenCalledOnce();
+      expect(clickFn).not.toHaveBeenCalled();
     });
   });
 
@@ -856,28 +784,6 @@ describe('$aria', function() {
 
       compileElement('<div ng-dblclick="someAction()"></div>');
       expect(element.attr('tabindex')).toBeUndefined();
-    });
-  });
-
-  describe('ngModel', function() {
-    it('should not break when manually compiling', function() {
-      module(function($compileProvider) {
-        $compileProvider.directive('foo', function() {
-          return {
-            priority: 10,
-            terminal: true,
-            link: function(scope, elem) {
-              $compile(elem, null, 10)(scope);
-            }
-          };
-        });
-      });
-
-      injectScopeAndCompiler();
-      compileElement('<div role="checkbox" ng-model="value" foo />');
-
-      // Just check an arbitrary feature to make sure it worked
-      expect(element.attr('tabindex')).toBe('0');
     });
   });
 });

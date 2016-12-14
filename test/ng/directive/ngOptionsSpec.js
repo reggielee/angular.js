@@ -120,6 +120,47 @@ describe('ngOptions', function() {
             return { pass: errors.length === 0, message: message };
           }
         };
+      },
+      toBeMarkedAsSelected: function() {
+        // Selected is special because the element property and attribute reflect each other's state.
+        // IE9 will wrongly report hasAttribute('selected') === true when the property is
+        // undefined or null, and the dev tools show that no attribute is set
+        return {
+          compare: function(actual) {
+            var errors = [];
+            if (actual.selected === null || typeof actual.selected === 'undefined' || actual.selected === false) {
+              errors.push('Expected option property "selected" to be truthy');
+            }
+
+            if (msie !== 9 && actual.hasAttribute('selected') === false) {
+              errors.push('Expected option to have attribute "selected"');
+            }
+
+            var result = {
+              pass: errors.length === 0,
+              message: errors.join('\n')
+            };
+
+            return result;
+          },
+          negativeCompare: function(actual) {
+            var errors = [];
+            if (actual.selected) {
+              errors.push('Expected option property "selected" to be falsy');
+            }
+
+            if (msie !== 9 && actual.hasAttribute('selected')) {
+              errors.push('Expected option not to have attribute "selected"');
+            }
+
+            var result = {
+              pass: errors.length === 0,
+              message: errors.join('\n')
+            };
+
+            return result;
+          }
+        };
       }
     });
   });
@@ -2088,28 +2129,8 @@ describe('ngOptions', function() {
       expect(options.eq(1).prop('disabled')).toEqual(false);
     });
 
-    it('should insert the unknown option if bound to null', function() {
+    it('should insert a blank option if bound to null', function() {
       createSingleSelect();
-
-      scope.$apply(function() {
-        scope.values = [{name: 'A'}];
-        scope.selected = null;
-      });
-
-      expect(element.find('option').length).toEqual(2);
-      expect(element.val()).toEqual('?');
-      expect(jqLite(element.find('option')[0]).val()).toEqual('?');
-
-      scope.$apply(function() {
-        scope.selected = scope.values[0];
-      });
-
-      expect(element).toEqualSelectValue(scope.selected);
-      expect(element.find('option').length).toEqual(1);
-    });
-
-    it('should select the provided empty option if bound to null', function() {
-      createSingleSelect(true);
 
       scope.$apply(function() {
         scope.values = [{name: 'A'}];
@@ -2125,8 +2146,7 @@ describe('ngOptions', function() {
       });
 
       expect(element).toEqualSelectValue(scope.selected);
-      expect(jqLite(element.find('option')[0]).val()).toEqual('');
-      expect(element.find('option').length).toEqual(2);
+      expect(element.find('option').length).toEqual(1);
     });
 
 
@@ -2294,7 +2314,7 @@ describe('ngOptions', function() {
         scope.values.pop();
       });
 
-      expect(element.val()).toEqual('?');
+      expect(element.val()).toEqual('');
       expect(scope.selected).toEqual(null);
 
       // Check after model change
@@ -2308,7 +2328,7 @@ describe('ngOptions', function() {
         scope.values.pop();
       });
 
-      expect(element.val()).toEqual('?');
+      expect(element.val()).toEqual('');
       expect(scope.selected).toEqual(null);
     });
 
@@ -2357,7 +2377,7 @@ describe('ngOptions', function() {
   });
 
 
-  describe('empty option', function() {
+  describe('blank option', function() {
 
     it('should be compiled as template, be watched and updated', function() {
       var option;
@@ -2837,23 +2857,6 @@ describe('ngOptions', function() {
       scope.$apply('required = true');
       expect(element).toBeValid();
       expect(scope.value).toBe(false);
-    });
-  });
-
-  describe('required and empty option', function() {
-
-    it('should select the empty option after compilation', function() {
-      createSelect({
-        'name': 'select',
-        'ng-model': 'value',
-        'ng-options': 'item for item in [\'first\', \'second\', \'third\']',
-        'required': 'required'
-      }, true);
-
-      expect(element.val()).toBe('');
-      var emptyOption = element.find('option').eq(0);
-      expect(emptyOption.prop('selected')).toBe(true);
-      expect(emptyOption.val()).toBe('');
     });
   });
 

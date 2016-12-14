@@ -32,8 +32,8 @@ var $$AnimateAsyncRunFactoryProvider = /** @this */ function() {
 };
 
 var $$AnimateRunnerFactoryProvider = /** @this */ function() {
-  this.$get = ['$q', '$sniffer', '$$animateAsyncRun', '$$isDocumentHidden', '$timeout',
-       function($q,   $sniffer,   $$animateAsyncRun,   $$isDocumentHidden,   $timeout) {
+  this.$get = ['$q', '$sniffer', '$$animateAsyncRun', '$document', '$timeout',
+       function($q,   $sniffer,   $$animateAsyncRun,   $document,   $timeout) {
 
     var INITIAL_STATE = 0;
     var DONE_PENDING_STATE = 1;
@@ -85,7 +85,11 @@ var $$AnimateRunnerFactoryProvider = /** @this */ function() {
 
       this._doneCallbacks = [];
       this._tick = function(fn) {
-        if ($$isDocumentHidden()) {
+        var doc = $document[0];
+
+        // the document may not be ready or attached
+        // to the module for some internal tests
+        if (doc && doc.hidden) {
           timeoutTick(fn);
         } else {
           rafTick(fn);

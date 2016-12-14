@@ -6,11 +6,9 @@
 Float32Array, Float64Array,  */
 
 describe('angular', function() {
-  var element, document;
+  var element;
 
-  beforeEach(function() {
-    document = window.document;
-  });
+  var document = window.document;
 
   afterEach(function() {
     dealoc(element);
@@ -1352,6 +1350,22 @@ describe('angular', function() {
       forEach(htmlCollection, function(value, key) { log.push(key + ':' + value.innerHTML); });
       expect(log).toEqual(['0:a', '1:c']);
     });
+
+    if (document.querySelectorAll) {
+      it('should handle the result of querySelectorAll in IE8 as it has no hasOwnProperty function', function() {
+        document.body.innerHTML = '<p>' +
+          '<a name=\'x\'>a</a>' +
+          '<a name=\'y\'>b</a>' +
+          '<a name=\'x\'>c</a>' +
+          '</p>';
+
+        var htmlCollection = document.querySelectorAll('[name="x"]'),
+          log = [];
+
+        forEach(htmlCollection, function(value, key) { log.push(key + ':' + value.innerHTML); });
+        expect(log).toEqual(['0:a', '1:c']);
+      });
+    }
 
     it('should handle arguments objects like arrays', function() {
       var args,

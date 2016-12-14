@@ -458,7 +458,7 @@ describe('ngAnimate $animateCss', function() {
             var runner = animator.start();
 
             if (method === 'catch') {
-              runner.catch(function() {
+              runner['catch'](function() {
                 cancelled = true;
               });
             } else {

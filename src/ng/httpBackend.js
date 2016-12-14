@@ -57,6 +57,7 @@ function $HttpBackendProvider() {
 function createHttpBackend($browser, createXhr, $browserDefer, callbacks, rawDocument) {
   // TODO(vojta): fix the signature
   return function(method, url, post, callback, headers, timeout, withCredentials, responseType, eventHandlers, uploadEventHandlers) {
+    $browser.$$incOutstandingRequestCount();
     url = url || $browser.url();
 
     if (lowercase(method) === 'jsonp') {
@@ -168,6 +169,7 @@ function createHttpBackend($browser, createXhr, $browserDefer, callbacks, rawDoc
       jsonpDone = xhr = null;
 
       callback(status, response, headersString, statusText);
+      $browser.$$completeOutstandingRequest(noop);
     }
   };
 
@@ -182,8 +184,8 @@ function createHttpBackend($browser, createXhr, $browserDefer, callbacks, rawDoc
     script.async = true;
 
     callback = function(event) {
-      script.removeEventListener('load', callback);
-      script.removeEventListener('error', callback);
+      removeEventListenerFn(script, 'load', callback);
+      removeEventListenerFn(script, 'error', callback);
       rawDocument.body.removeChild(script);
       script = null;
       var status = -1;
@@ -202,8 +204,8 @@ function createHttpBackend($browser, createXhr, $browserDefer, callbacks, rawDoc
       }
     };
 
-    script.addEventListener('load', callback);
-    script.addEventListener('error', callback);
+    addEventListenerFn(script, 'load', callback);
+    addEventListenerFn(script, 'error', callback);
     rawDocument.body.appendChild(script);
     return callback;
   }

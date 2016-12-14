@@ -157,12 +157,14 @@ describe('animations', function() {
     }));
 
     it('should skip animations entirely if the document is hidden', function() {
-      var hidden = true;
+      var doc;
 
       module(function($provide) {
-        $provide.value('$$isDocumentHidden', function() {
-          return hidden;
+        doc = jqLite({
+          body: window.document.body,
+          hidden: true
         });
+        $provide.value('$document', doc);
       });
 
       inject(function($animate, $rootScope) {
@@ -171,7 +173,7 @@ describe('animations', function() {
         expect(capturedAnimation).toBeFalsy();
         expect(element[0].parentNode).toEqual(parent[0]);
 
-        hidden = false;
+        doc[0].hidden = false;
 
         $animate.leave(element);
         $rootScope.$digest();
@@ -179,7 +181,7 @@ describe('animations', function() {
       });
     });
 
-    it('should animate only the specified CSS className matched within $animateProvider.classNameFilter for div', function() {
+    it('should animate only the specified CSS className matched within $animateProvider.classNameFilter', function() {
       module(function($animateProvider) {
         $animateProvider.classNameFilter(/only-allow-this-animation/);
       });
@@ -193,26 +195,6 @@ describe('animations', function() {
         element.addClass('only-allow-this-animation');
 
         $animate.leave(element, parent);
-        $rootScope.$digest();
-        expect(capturedAnimation).toBeTruthy();
-      });
-    });
-
-    it('should animate only the specified CSS className matched within $animateProvider.classNameFilter for svg', function() {
-      module(function($animateProvider) {
-        $animateProvider.classNameFilter(/only-allow-this-animation-svg/);
-      });
-      inject(function($animate, $rootScope, $compile) {
-        var svgElement = $compile('<svg class="element"></svg>')($rootScope);
-        expect(svgElement).not.toHaveClass('only-allow-this-animation-svg');
-
-        $animate.enter(svgElement, parent);
-        $rootScope.$digest();
-        expect(capturedAnimation).toBeFalsy();
-
-        svgElement.attr('class', 'element only-allow-this-animation-svg');
-
-        $animate.leave(svgElement, parent);
         $rootScope.$digest();
         expect(capturedAnimation).toBeTruthy();
       });
@@ -2550,19 +2532,18 @@ describe('animations', function() {
 
 
       describe('because the document is hidden', function() {
-        var hidden = true;
-
-        beforeEach(function() {
-          module(function($provide) {
-            $provide.value('$$isDocumentHidden', function() {
-              return hidden;
-            });
+        beforeEach(module(function($provide) {
+          var doc = jqLite({
+            body: window.document.body,
+            hidden: true
           });
-        });
+          $provide.value('$document', doc);
+        }));
 
         it('should trigger callbacks for an enter animation',
           inject(function($animate, $rootScope, $rootElement, $document) {
 
+          var callbackTriggered = false;
           var spy = jasmine.createSpy();
           $animate.on('enter', jqLite($document[0].body), spy);
 

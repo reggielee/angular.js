@@ -13,28 +13,6 @@ describe('$location', function() {
   });
 
 
-  describe('defaults', function() {
-    it('should have hashPrefix of "!"', function() {
-      initService({});
-      inject(
-        initBrowser({ url: 'http://host.com/base/index.html', basePath: '/base/index.html' }),
-        function($location) {
-          $location.path('/a/b/c');
-          expect($location.absUrl()).toEqual('http://host.com/base/index.html#!/a/b/c');
-        });
-    });
-
-    it('should not be html5 mode', function() {
-      initService({});
-      inject(
-        initBrowser({ url: 'http://host.com/base/index.html', basePath: '/base/index.html' }),
-        function($location) {
-          $location.path('/a/b/c');
-          expect($location.absUrl()).toContain('#!');
-        });
-    });
-  });
-
   describe('File Protocol', function() {
     /* global urlParsingNode: true */
     var urlParsingNodePlaceholder;
@@ -698,10 +676,10 @@ describe('$location', function() {
                 $location.path('/').replace();
             }
           });
-          expect($browser.url()).toEqual('http://server/base/#!/home');
+          expect($browser.url()).toEqual('http://server/base/#/home');
           $rootScope.$digest();
           expect(handlerCalled).toEqual(true);
-          expect($browser.url()).toEqual('http://server/base/#!/');
+          expect($browser.url()).toEqual('http://server/base/#/');
         }
       );
     });
@@ -738,7 +716,7 @@ describe('$location', function() {
 
           $rootScope.$digest();
 
-          expect($browser.url()).toEqual('http://server/app/#!/Home');
+          expect($browser.url()).toEqual('http://server/app/#/Home');
           expect($location.path()).toEqual('/Home');
           expect($browserUrl).toHaveBeenCalledTimes(1);
         });
@@ -754,10 +732,10 @@ describe('$location', function() {
 
           $rootScope.$digest();
 
-          expect($browser.url()).toEqual('http://server/app/#!/');
+          expect($browser.url()).toEqual('http://server/app/#/');
           expect($location.path()).toEqual('/');
           expect($browserUrl).toHaveBeenCalledTimes(1);
-          expect($browserUrl.calls.argsFor(0)).toEqual(['http://server/app/#!/', false, null]);
+          expect($browserUrl.calls.argsFor(0)).toEqual(['http://server/app/#/', false, null]);
         });
       });
 
@@ -770,10 +748,10 @@ describe('$location', function() {
           updatePathOnLocationChangeSuccessTo('/Home');
           $rootScope.$digest();
 
-          expect($browser.url()).toEqual('http://server/app/#!/Home');
+          expect($browser.url()).toEqual('http://server/app/#/Home');
           expect($location.path()).toEqual('/Home');
           expect($browserUrl).toHaveBeenCalledTimes(1);
-          expect($browserUrl.calls.argsFor(0)).toEqual(['http://server/app/#!/Home', false, null]);
+          expect($browserUrl.calls.argsFor(0)).toEqual(['http://server/app/#/Home', false, null]);
         });
       });
 
@@ -786,7 +764,7 @@ describe('$location', function() {
           updatePathOnLocationChangeSuccessTo('/');
           $rootScope.$digest();
 
-          expect($browser.url()).toEqual('http://server/app/#!/');
+          expect($browser.url()).toEqual('http://server/app/#/');
           expect($location.path()).toEqual('/');
           expect($browserUrl).toHaveBeenCalledTimes(1);
         });
@@ -1872,17 +1850,17 @@ describe('$location', function() {
         // we need to do this otherwise we can't simulate events
         $document.find('body').append($rootElement);
 
-        var element = $compile('<a href="#!/view1">v1</a><a href="#!/view2">v2</a>')($rootScope);
+        var element = $compile('<a href="#/view1">v1</a><a href="#/view2">v2</a>')($rootScope);
         $rootElement.append(element);
         var av1 = $rootElement.find('a').eq(0);
         var av2 = $rootElement.find('a').eq(1);
 
 
         browserTrigger(av1, 'click');
-        expect($browser.url()).toEqual(base + '#!/view1');
+        expect($browser.url()).toEqual(base + '#/view1');
 
         browserTrigger(av2, 'click');
-        expect($browser.url()).toEqual(base + '#!/view2');
+        expect($browser.url()).toEqual(base + '#/view2');
 
         $rootElement.remove();
       });
@@ -1894,27 +1872,27 @@ describe('$location', function() {
       var base;
       module(function($locationProvider) {
         return function($browser) {
-          window.location.hash = '!!someHash';
+          window.location.hash = '!someHash';
           $browser.url(base = window.location.href);
           base = base.split('#')[0];
-          $locationProvider.hashPrefix('!!');
+          $locationProvider.hashPrefix('!');
         };
       });
       inject(function($rootScope, $compile, $browser, $rootElement, $document, $location) {
         // we need to do this otherwise we can't simulate events
         $document.find('body').append($rootElement);
 
-        var element = $compile('<a href="#!!/view1">v1</a><a href="#!!/view2">v2</a>')($rootScope);
+        var element = $compile('<a href="#!/view1">v1</a><a href="#!/view2">v2</a>')($rootScope);
         $rootElement.append(element);
         var av1 = $rootElement.find('a').eq(0);
         var av2 = $rootElement.find('a').eq(1);
 
 
         browserTrigger(av1, 'click');
-        expect($browser.url()).toEqual(base + '#!!/view1');
+        expect($browser.url()).toEqual(base + '#!/view1');
 
         browserTrigger(av2, 'click');
-        expect($browser.url()).toEqual(base + '#!!/view2');
+        expect($browser.url()).toEqual(base + '#!/view2');
       });
     });
 
@@ -2042,11 +2020,11 @@ describe('$location', function() {
       $rootScope.$apply();
 
       expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/somePath', 'http://server/', 'http://server/']);
+          toEqual(['before', 'http://server/#/somePath', 'http://server/', 'http://server/']);
       expect($log.info.logs.shift()).
-          toEqual(['after', 'http://server/#!/somePath', 'http://server/', 'http://server/#!/somePath']);
+          toEqual(['after', 'http://server/#/somePath', 'http://server/', 'http://server/#/somePath']);
       expect($location.url()).toEqual('/somePath');
-      expect($browser.url()).toEqual('http://server/#!/somePath');
+      expect($browser.url()).toEqual('http://server/#/somePath');
     }));
 
 
@@ -2071,7 +2049,7 @@ describe('$location', function() {
       $rootScope.$apply();
 
       expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/somePath', 'http://server/', 'http://server/']);
+          toEqual(['before', 'http://server/#/somePath', 'http://server/', 'http://server/']);
       expect($log.info.logs[1]).toBeUndefined();
       expect($location.url()).toEqual('');
       expect($browser.url()).toEqual('http://server/');
@@ -2081,7 +2059,7 @@ describe('$location', function() {
       inject(function($location, $browser, $rootScope, $log) {
         $rootScope.$on('$locationChangeStart', function(event, newUrl, oldUrl) {
           $log.info('before', newUrl, oldUrl, $browser.url());
-          if (newUrl === 'http://server/#!/somePath') {
+          if (newUrl === 'http://server/#/somePath') {
             $location.url('/redirectPath');
           }
         });
@@ -2093,15 +2071,15 @@ describe('$location', function() {
         $rootScope.$apply();
 
         expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/somePath', 'http://server/', 'http://server/']);
+          toEqual(['before', 'http://server/#/somePath', 'http://server/', 'http://server/']);
         expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/redirectPath', 'http://server/', 'http://server/']);
+          toEqual(['before', 'http://server/#/redirectPath', 'http://server/', 'http://server/']);
         expect($log.info.logs.shift()).
-          toEqual(['after', 'http://server/#!/redirectPath', 'http://server/',
-                  'http://server/#!/redirectPath']);
+          toEqual(['after', 'http://server/#/redirectPath', 'http://server/',
+                  'http://server/#/redirectPath']);
 
         expect($location.url()).toEqual('/redirectPath');
-        expect($browser.url()).toEqual('http://server/#!/redirectPath');
+        expect($browser.url()).toEqual('http://server/#/redirectPath');
       })
     );
 
@@ -2109,7 +2087,7 @@ describe('$location', function() {
       inject(function($location, $browser, $rootScope, $log) {
         $rootScope.$on('$locationChangeStart', function(event, newUrl, oldUrl) {
           $log.info('before', newUrl, oldUrl, $browser.url());
-          if (newUrl === 'http://server/#!/somePath') {
+          if (newUrl === 'http://server/#/somePath') {
             event.preventDefault();
             $location.url('/redirectPath');
           }
@@ -2122,15 +2100,15 @@ describe('$location', function() {
         $rootScope.$apply();
 
         expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/somePath', 'http://server/', 'http://server/']);
+          toEqual(['before', 'http://server/#/somePath', 'http://server/', 'http://server/']);
         expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/redirectPath', 'http://server/', 'http://server/']);
+          toEqual(['before', 'http://server/#/redirectPath', 'http://server/', 'http://server/']);
         expect($log.info.logs.shift()).
-          toEqual(['after', 'http://server/#!/redirectPath', 'http://server/',
-                  'http://server/#!/redirectPath']);
+          toEqual(['after', 'http://server/#/redirectPath', 'http://server/',
+                  'http://server/#/redirectPath']);
 
         expect($location.url()).toEqual('/redirectPath');
-        expect($browser.url()).toEqual('http://server/#!/redirectPath');
+        expect($browser.url()).toEqual('http://server/#/redirectPath');
       })
     );
 
@@ -2138,9 +2116,9 @@ describe('$location', function() {
       inject(function($location, $browser, $rootScope, $log) {
         $rootScope.$on('$locationChangeStart', function(event, newUrl, oldUrl) {
           $log.info('before', newUrl, oldUrl, $browser.url());
-          if (newUrl === 'http://server/#!/somePath') {
+          if (newUrl === 'http://server/#/somePath') {
             $location.url('/redirectPath');
-          } else if (newUrl === 'http://server/#!/redirectPath') {
+          } else if (newUrl === 'http://server/#/redirectPath') {
             $location.url('/redirectPath2');
           }
         });
@@ -2152,17 +2130,17 @@ describe('$location', function() {
         $rootScope.$apply();
 
         expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/somePath', 'http://server/', 'http://server/']);
+          toEqual(['before', 'http://server/#/somePath', 'http://server/', 'http://server/']);
         expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/redirectPath', 'http://server/', 'http://server/']);
+          toEqual(['before', 'http://server/#/redirectPath', 'http://server/', 'http://server/']);
         expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/redirectPath2', 'http://server/', 'http://server/']);
+          toEqual(['before', 'http://server/#/redirectPath2', 'http://server/', 'http://server/']);
         expect($log.info.logs.shift()).
-          toEqual(['after', 'http://server/#!/redirectPath2', 'http://server/',
-                  'http://server/#!/redirectPath2']);
+          toEqual(['after', 'http://server/#/redirectPath2', 'http://server/',
+                  'http://server/#/redirectPath2']);
 
         expect($location.url()).toEqual('/redirectPath2');
-        expect($browser.url()).toEqual('http://server/#!/redirectPath2');
+        expect($browser.url()).toEqual('http://server/#/redirectPath2');
       })
     );
 
@@ -2181,13 +2159,13 @@ describe('$location', function() {
         });
 
 
-        $browser.url('http://server/#!/somePath');
+        $browser.url('http://server/#/somePath');
         $browser.poll();
 
         expect($log.info.logs.shift()).
-          toEqual(['start', 'http://server/#!/somePath', 'http://server/']);
+          toEqual(['start', 'http://server/#/somePath', 'http://server/']);
         expect($log.info.logs.shift()).
-          toEqual(['after', 'http://server/#!/somePath', 'http://server/']);
+          toEqual(['after', 'http://server/#/somePath', 'http://server/']);
       })
     );
 
@@ -2196,7 +2174,7 @@ describe('$location', function() {
         $location.url('/somepath');
         $rootScope.$apply();
 
-        expect($browser.url()).toEqual('http://server/#!/somepath');
+        expect($browser.url()).toEqual('http://server/#/somepath');
         expect($location.url()).toEqual('/somepath');
 
         $rootScope.$on('$locationChangeStart', function(event, newUrl, oldUrl) {
@@ -2210,9 +2188,9 @@ describe('$location', function() {
         $browser.poll();
 
         expect($log.info.logs.shift()).
-          toEqual(['start', 'http://server/', 'http://server/#!/somepath']);
+          toEqual(['start', 'http://server/', 'http://server/#/somepath']);
         expect($log.info.logs.shift()).
-          toEqual(['after', 'http://server/', 'http://server/#!/somepath']);
+          toEqual(['after', 'http://server/', 'http://server/#/somepath']);
       })
     );
 
@@ -2220,7 +2198,7 @@ describe('$location', function() {
       inject(function($location, $browser, $rootScope, $log) {
         $rootScope.$on('$locationChangeStart', function(event, newUrl, oldUrl) {
           $log.info('before', newUrl, oldUrl, $browser.url());
-          if (newUrl === 'http://server/#!/somePath') {
+          if (newUrl === 'http://server/#/somePath') {
             $location.url('/redirectPath');
           }
         });
@@ -2228,21 +2206,21 @@ describe('$location', function() {
           $log.info('after', newUrl, oldUrl, $browser.url());
         });
 
-        $browser.url('http://server/#!/somePath');
+        $browser.url('http://server/#/somePath');
         $browser.poll();
 
         expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/somePath', 'http://server/',
-                  'http://server/#!/somePath']);
+          toEqual(['before', 'http://server/#/somePath', 'http://server/',
+                  'http://server/#/somePath']);
         expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/redirectPath', 'http://server/#!/somePath',
-                  'http://server/#!/somePath']);
+          toEqual(['before', 'http://server/#/redirectPath', 'http://server/#/somePath',
+                  'http://server/#/somePath']);
         expect($log.info.logs.shift()).
-          toEqual(['after', 'http://server/#!/redirectPath', 'http://server/#!/somePath',
-                  'http://server/#!/redirectPath']);
+          toEqual(['after', 'http://server/#/redirectPath', 'http://server/#/somePath',
+                  'http://server/#/redirectPath']);
 
         expect($location.url()).toEqual('/redirectPath');
-        expect($browser.url()).toEqual('http://server/#!/redirectPath');
+        expect($browser.url()).toEqual('http://server/#/redirectPath');
       })
     );
 
@@ -2250,7 +2228,7 @@ describe('$location', function() {
       inject(function($location, $browser, $rootScope, $log) {
         $rootScope.$on('$locationChangeStart', function(event, newUrl, oldUrl) {
           $log.info('before', newUrl, oldUrl, $browser.url());
-          if (newUrl === 'http://server/#!/somePath') {
+          if (newUrl === 'http://server/#/somePath') {
             event.preventDefault();
             $location.url('/redirectPath');
           }
@@ -2259,28 +2237,28 @@ describe('$location', function() {
           $log.info('after', newUrl, oldUrl, $browser.url());
         });
 
-        $browser.url('http://server/#!/somePath');
+        $browser.url('http://server/#/somePath');
         $browser.poll();
 
         expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/somePath', 'http://server/',
-                  'http://server/#!/somePath']);
+          toEqual(['before', 'http://server/#/somePath', 'http://server/',
+                  'http://server/#/somePath']);
         expect($log.info.logs.shift()).
-          toEqual(['before', 'http://server/#!/redirectPath', 'http://server/#!/somePath',
-                  'http://server/#!/somePath']);
+          toEqual(['before', 'http://server/#/redirectPath', 'http://server/#/somePath',
+                  'http://server/#/somePath']);
         expect($log.info.logs.shift()).
-          toEqual(['after', 'http://server/#!/redirectPath', 'http://server/#!/somePath',
-                  'http://server/#!/redirectPath']);
+          toEqual(['after', 'http://server/#/redirectPath', 'http://server/#/somePath',
+                  'http://server/#/redirectPath']);
 
         expect($location.url()).toEqual('/redirectPath');
-        expect($browser.url()).toEqual('http://server/#!/redirectPath');
+        expect($browser.url()).toEqual('http://server/#/redirectPath');
       })
     );
 
     it('should listen on click events on href and prevent browser default in hashbang mode', function() {
       module(function() {
         return function($rootElement, $compile, $rootScope) {
-          $rootElement.html('<a href="http://server/#!/somePath">link</a>');
+          $rootElement.html('<a href="http://server/#/somePath">link</a>');
           $compile($rootElement)($rootScope);
           jqLite(window.document.body).append($rootElement);
         };
@@ -2360,7 +2338,7 @@ describe('$location', function() {
         });
 
         // change through $browser
-        $browser.url(base + '#!/myNewPath');
+        $browser.url(base + '#/myNewPath');
         $browser.poll();
 
         expect(log).toEqual(['/myNewPath', '/', '/myNewPath']);

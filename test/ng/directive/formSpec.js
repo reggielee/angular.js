@@ -290,7 +290,7 @@ describe('form', function() {
   describe('triggering commit value on submit', function() {
     it('should trigger update on form submit', function() {
       var form = $compile(
-          '<form name="test" ng-model-options="{ updateOn: \'submit\' }" >' +
+          '<form name="test" ng-model-options="{ updateOn: \'\' }" >' +
             '<input type="text" ng-model="name" />' +
           '</form>')(scope);
       scope.$digest();
@@ -305,7 +305,7 @@ describe('form', function() {
 
     it('should trigger update on form submit with nested forms', function() {
       var form = $compile(
-          '<form name="test" ng-model-options="{ updateOn: \'submit\' }" >' +
+          '<form name="test" ng-model-options="{ updateOn: \'\' }" >' +
             '<div class="ng-form" name="child">' +
               '<input type="text" ng-model="name" />' +
             '</div>' +
@@ -323,7 +323,7 @@ describe('form', function() {
     it('should trigger update before ng-submit is invoked', function() {
       var form = $compile(
           '<form name="test" ng-submit="submit()" ' +
-              'ng-model-options="{ updateOn: \'submit\' }" >' +
+              'ng-model-options="{ updateOn: \'\' }" >' +
             '<input type="text" ng-model="name" />' +
           '</form>')(scope);
       scope.$digest();
@@ -342,7 +342,7 @@ describe('form', function() {
   describe('rollback view value', function() {
     it('should trigger rollback on form controls', function() {
       var form = $compile(
-          '<form name="test" ng-model-options="{ updateOn: \'submit\' }" >' +
+          '<form name="test" ng-model-options="{ updateOn: \'\' }" >' +
             '<input type="text" ng-model="name" />' +
             '<button ng-click="test.$rollbackViewValue()" />' +
           '</form>')(scope);
@@ -358,7 +358,7 @@ describe('form', function() {
 
     it('should trigger rollback on form controls with nested forms', function() {
       var form = $compile(
-          '<form name="test" ng-model-options="{ updateOn: \'submit\' }" >' +
+          '<form name="test" ng-model-options="{ updateOn: \'\' }" >' +
             '<div class="ng-form" name="child">' +
               '<input type="text" ng-model="name" />' +
             '</div>' +
@@ -397,7 +397,7 @@ describe('form', function() {
         submitted = true;
       };
 
-      doc[0].addEventListener('submit', assertPreventDefaultListener);
+      addEventListenerFn(doc[0], 'submit', assertPreventDefaultListener);
 
       browserTrigger(doc.find('input'));
 
@@ -409,7 +409,7 @@ describe('form', function() {
         expect(submitted).toBe(true);
 
         // prevent mem leak in test
-        doc[0].removeEventListener('submit', assertPreventDefaultListener);
+        removeEventListenerFn(doc[0], 'submit', assertPreventDefaultListener);
       })
       .done();
       job.start();
@@ -448,7 +448,7 @@ describe('form', function() {
 
         $compile(doc)(scope);
 
-        form[0].addEventListener('submit', assertPreventDefaultListener);
+        addEventListenerFn(form[0], 'submit', assertPreventDefaultListener);
 
         browserTrigger(doc.find('button'), 'click');
 
@@ -467,7 +467,7 @@ describe('form', function() {
                                          // now. (i)
 
           // prevent mem leak in test
-          form[0].removeEventListener('submit', assertPreventDefaultListener);
+          removeEventListenerFn(form[0], 'submit', assertPreventDefaultListener);
         })
         .done();
         job.start();

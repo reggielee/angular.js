@@ -10,6 +10,7 @@
 /* global noop: true */
 /* global toJson: true */
 /* global MessageFormatParser: false */
+/* global stringify: false */
 
 /**
  * @ngdoc module
@@ -179,7 +180,7 @@ var $$MessageFormatFactory = ['$parse', '$locale', '$sce', '$exceptionHandler', 
     return function stringifier(value) {
       try {
         value = trustedContext ? $sce['getTrusted'](trustedContext, value) : $sce['valueOf'](value);
-        return allOrNothing && (value === undefined) ? value : $$stringify(value);
+        return allOrNothing && (value === undefined) ? value : stringify(value);
       } catch (err) {
         $exceptionHandler($interpolateMinErr['interr'](text, err));
       }
@@ -213,7 +214,6 @@ var $interpolateMinErr;
 var isFunction;
 var noop;
 var toJson;
-var $$stringify;
 
 var module = window['angular']['module']('ngMessageFormat', ['ng']);
 module['factory']('$$messageFormat', $$MessageFormatFactory);
@@ -222,7 +222,6 @@ module['config'](['$provide', function($provide) {
   isFunction = window['angular']['isFunction'];
   noop = window['angular']['noop'];
   toJson = window['angular']['toJson'];
-  $$stringify = window['angular']['$$stringify'];
 
   $provide['decorator']('$interpolate', $$interpolateDecorator);
 }]);

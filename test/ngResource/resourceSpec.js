@@ -152,23 +152,6 @@ describe('basic usage', function() {
   });
 
 
-  it('should not throw if response.data is the resource object', function() {
-    var data = {id:{key:123}, number:'9876'};
-    $httpBackend.expect('GET', '/CreditCard/123').respond(data);
-
-    var cc = CreditCard.get({id:123});
-    $httpBackend.flush();
-    expect(cc instanceof CreditCard).toBe(true);
-
-    $httpBackend.expect('POST', '/CreditCard/123', angular.toJson(data)).respond(cc);
-
-    cc.$save();
-    $httpBackend.flush();
-    expect(cc.id).toEqual({key:123});
-    expect(cc.number).toEqual('9876');
-  });
-
-
   it('should default to empty parameters', function() {
     $httpBackend.expect('GET', 'URL').respond({});
     $resource('URL').query();
@@ -254,14 +237,10 @@ describe('basic usage', function() {
     $httpBackend.expect('GET', '/Path/foo%231').respond('{}');
     $httpBackend.expect('GET', '/Path/doh!@foo?bar=baz%231').respond('{}');
     $httpBackend.expect('GET', '/Path/herp$').respond('{}');
-    $httpBackend.expect('GET', '/Path/foo;bar').respond('{}');
-    $httpBackend.expect('GET', '/Path/foo?bar=baz;qux').respond('{}');
 
     R.get({a: 'foo#1'});
     R.get({a: 'doh!@foo', bar: 'baz#1'});
     R.get({a: 'herp$'});
-    R.get({a: 'foo;bar'});
-    R.get({a: 'foo', bar: 'baz;qux'});
   });
 
   it('should not encode @ in url params', function() {
@@ -1479,49 +1458,6 @@ describe('basic usage', function() {
   });
 });
 
-describe('extra params', function() {
-  var $http;
-  var $httpBackend;
-  var $resource;
-
-  beforeEach(module('ngResource'));
-
-  beforeEach(module(function($provide) {
-    $provide.decorator('$http', function($delegate) {
-      return jasmine.createSpy('$http').and.callFake($delegate);
-    });
-  }));
-
-  beforeEach(inject(function(_$http_, _$httpBackend_, _$resource_) {
-    $http = _$http_;
-    $httpBackend = _$httpBackend_;
-    $resource = _$resource_;
-  }));
-
-  afterEach(function() {
-    $httpBackend.verifyNoOutstandingExpectation();
-  });
-
-
-  it('should pass extra params to `$http` as `config.params`', function() {
-    $httpBackend.expectGET('/bar?baz=qux').respond('{}');
-
-    var R = $resource('/:foo');
-    R.get({foo: 'bar', baz: 'qux'});
-
-    expect($http).toHaveBeenCalledWith(jasmine.objectContaining({params: {baz: 'qux'}}));
-  });
-
-  it('should pass extra params even if `Object.prototype` has properties with the same name',
-    function() {
-      $httpBackend.expectGET('/foo?toString=bar').respond('{}');
-
-      var R = $resource('/foo');
-      R.get({toString: 'bar'});
-    }
-  );
-});
-
 describe('errors', function() {
   var $httpBackend, $resource, $q;
 
@@ -1574,17 +1510,12 @@ describe('errors', function() {
 });
 
 describe('handling rejections', function() {
-  var $exceptionHandler;
   var $httpBackend;
   var $resource;
 
   beforeEach(module('ngResource'));
-  beforeEach(module(function($exceptionHandlerProvider) {
-    $exceptionHandlerProvider.mode('log');
-  }));
 
-  beforeEach(inject(function(_$exceptionHandler_, _$httpBackend_, _$resource_) {
-    $exceptionHandler = _$exceptionHandler_;
+  beforeEach(inject(function(_$httpBackend_, _$resource_) {
     $httpBackend = _$httpBackend_;
     $resource = _$resource_;
 
@@ -1597,76 +1528,12 @@ describe('handling rejections', function() {
     var errorCb2 = jasmine.createSpy('errorCb2');
     var CreditCard = $resource('/CreditCard');
 
-    CreditCard.get(noop, errorCb1).$promise.catch(errorCb2);
+    CreditCard.get(noop, errorCb1).$promise['catch'](errorCb2);
     $httpBackend.flush();
 
     expect(errorCb1).toHaveBeenCalledOnce();
     expect(errorCb2).toHaveBeenCalledOnce();
   });
-
-
-  it('should report a PUR when no error callback or responseError interceptor is provided',
-    function() {
-      var CreditCard = $resource('/CreditCard');
-
-      CreditCard.get();
-      $httpBackend.flush();
-
-      expect($exceptionHandler.errors.length).toBe(1);
-      expect($exceptionHandler.errors[0]).toMatch(/^Possibly unhandled rejection/);
-    }
-  );
-
-
-  it('should not report a PUR when an error callback or responseError interceptor is provided',
-    function() {
-      var CreditCard = $resource('/CreditCard', {}, {
-        test1: {
-          method: 'GET'
-        },
-        test2: {
-          method: 'GET',
-          interceptor: {responseError: function() { return {}; }}
-        }
-      });
-
-      // With error callback
-      CreditCard.test1(noop, noop);
-      $httpBackend.flush();
-
-      expect($exceptionHandler.errors.length).toBe(0);
-
-      // With responseError interceptor
-      CreditCard.test2();
-      $httpBackend.flush();
-
-      expect($exceptionHandler.errors.length).toBe(0);
-
-      // With error callback and responseError interceptor
-      CreditCard.test2(noop, noop);
-      $httpBackend.flush();
-
-      expect($exceptionHandler.errors.length).toBe(0);
-    }
-  );
-
-
-  it('should report a PUR when the responseError interceptor returns a rejected promise',
-    inject(function($q) {
-      var CreditCard = $resource('/CreditCard', {}, {
-        test: {
-          method: 'GET',
-          interceptor: {responseError: function() { return $q.reject({}); }}
-        }
-      });
-
-      CreditCard.test();
-      $httpBackend.flush();
-
-      expect($exceptionHandler.errors.length).toBe(1);
-      expect($exceptionHandler.errors[0]).toMatch(/^Possibly unhandled rejection/);
-    })
-  );
 });
 
 describe('cancelling requests', function() {
@@ -1842,8 +1709,7 @@ describe('cancelling requests', function() {
       }
     });
 
-    var ccs = CreditCard.get();
-    ccs.$promise.catch(noop);
+    CreditCard.get();
     $timeout.flush();
     expect($httpBackend.flush).toThrow(new Error('No pending request to flush !'));
 
@@ -1862,8 +1728,7 @@ describe('cancelling requests', function() {
       }
     });
 
-    var ccs = CreditCard.get();
-    ccs.$cancelRequest();
+    CreditCard.get().$cancelRequest();
     expect($httpBackend.flush).toThrow(new Error('No pending request to flush !'));
 
     CreditCard.get();
@@ -1881,8 +1746,7 @@ describe('cancelling requests', function() {
       }
     });
 
-    var ccs = CreditCard.get();
-    ccs.$cancelRequest();
+    CreditCard.get().$cancelRequest();
     expect($httpBackend.flush).toThrow(new Error('No pending request to flush !'));
 
     CreditCard.get();

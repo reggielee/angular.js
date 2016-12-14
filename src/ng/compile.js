@@ -1379,7 +1379,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
    *
    * The default value is true in Angular 1.5.x but will switch to false in Angular 1.6.x.
    */
-  var preAssignBindingsEnabled = false;
+  var preAssignBindingsEnabled = true;
   this.preAssignBindingsEnabled = function(enabled) {
     if (isDefined(enabled)) {
       preAssignBindingsEnabled = enabled;
@@ -1841,15 +1841,25 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         // modify it.
         $compileNodes = jqLite($compileNodes);
       }
+
+      var NOT_EMPTY = /\S+/;
+
+      // We can not compile top level text elements since text nodes can be merged and we will
+      // not be able to attach scope data to them, so we will wrap them in <span>
+      for (var i = 0, len = $compileNodes.length; i < len; i++) {
+        var domNode = $compileNodes[i];
+
+        if (domNode.nodeType === NODE_TYPE_TEXT && domNode.nodeValue.match(NOT_EMPTY) /* non-empty */) {
+          jqLiteWrapNode(domNode, $compileNodes[i] = window.document.createElement('span'));
+        }
+      }
+
       var compositeLinkFn =
               compileNodes($compileNodes, transcludeFn, $compileNodes,
                            maxPriority, ignoreDirective, previousCompileContext);
       compile.$$addScopeClass($compileNodes);
       var namespace = null;
       return function publicLinkFn(scope, cloneConnectFn, options) {
-        if (!$compileNodes) {
-          throw $compileMinErr('multilink', 'This element has already been linked.');
-        }
         assertArg(scope, 'scope');
 
         if (previousCompileContext && previousCompileContext.needsNewScope) {
@@ -1904,10 +1914,6 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
         if (cloneConnectFn) cloneConnectFn($linkNode, scope);
         if (compositeLinkFn) compositeLinkFn(scope, $linkNode, $linkNode, parentBoundTranscludeFn);
-
-        if (!cloneConnectFn) {
-          $compileNodes = compositeLinkFn = null;
-        }
         return $linkNode;
       };
     }
@@ -1940,22 +1946,12 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
     function compileNodes(nodeList, transcludeFn, $rootElement, maxPriority, ignoreDirective,
                             previousCompileContext) {
       var linkFns = [],
-          // `nodeList` can be either an element's `.childNodes` (live NodeList)
-          // or a jqLite/jQuery collection or an array
-          notLiveList = isArray(nodeList) || (nodeList instanceof jqLite),
           attrs, directives, nodeLinkFn, childNodes, childLinkFn, linkFnFound, nodeLinkFnFound;
-
 
       for (var i = 0; i < nodeList.length; i++) {
         attrs = new Attributes();
 
-        // Workaround for #11781 and #14924
-        if (msie === 11) {
-          mergeConsecutiveTextNodes(nodeList, i, notLiveList);
-        }
-
-        // We must always refer to `nodeList[i]` hereafter,
-        // since the nodes can be replaced underneath us.
+        // we must always refer to nodeList[i] since the nodes can be replaced underneath us.
         directives = collectDirectives(nodeList[i], [], attrs, i === 0 ? maxPriority : undefined,
                                         ignoreDirective);
 
@@ -2046,32 +2042,6 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       }
     }
 
-    function mergeConsecutiveTextNodes(nodeList, idx, notLiveList) {
-      var node = nodeList[idx];
-      var parent = node.parentNode;
-      var sibling;
-
-      if (node.nodeType !== NODE_TYPE_TEXT) {
-        return;
-      }
-
-      while (true) {
-        sibling = parent ? node.nextSibling : nodeList[idx + 1];
-        if (!sibling || sibling.nodeType !== NODE_TYPE_TEXT) {
-          break;
-        }
-
-        node.nodeValue = node.nodeValue + sibling.nodeValue;
-
-        if (sibling.parentNode) {
-          sibling.parentNode.removeChild(sibling);
-        }
-        if (notLiveList && sibling === nodeList[idx + 1]) {
-          nodeList.splice(idx + 1, 1);
-        }
-      }
-    }
-
     function createBoundTranscludeFn(scope, transcludeFn, previousBoundTranscludeFn) {
       function boundTranscludeFn(transcludedScope, cloneFn, controllers, futureParentElement, containingScope) {
 
@@ -2135,7 +2105,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
             attr = nAttrs[j];
             name = attr.name;
-            value = attr.value;
+            value = trim(attr.value);
 
             // support ngAttr attribute binding
             ngAttrName = directiveNormalize(name);
@@ -2191,6 +2161,13 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           }
           break;
         case NODE_TYPE_TEXT: /* Text Node */
+          if (msie === 11) {
+            // Workaround for #11781
+            while (node.parentNode && node.nextSibling && node.nextSibling.nodeType === NODE_TYPE_TEXT) {
+              node.nodeValue = node.nodeValue + node.nextSibling.nodeValue;
+              node.parentNode.removeChild(node.nextSibling);
+            }
+          }
           addTextInterpolateDirective(directives, node.nodeValue);
           break;
         case NODE_TYPE_COMMENT: /* Comment */
@@ -2463,9 +2440,9 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
             var slots = createMap();
 
-            if (!isObject(directiveValue)) {
-              $template = jqLite(jqLiteClone(compileNode)).contents();
-            } else {
+            $template = jqLite(jqLiteClone(compileNode)).contents();
+
+            if (isObject(directiveValue)) {
 
               // We have transclusion slots,
               // collect them up, compile them and store their transclusion functions
@@ -3017,11 +2994,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       forEach(dst, function(value, key) {
         if (key.charAt(0) !== '$') {
           if (src[key] && src[key] !== value) {
-            if (value.length) {
-              value += (key === 'style' ? ';' : ' ') + src[key];
-            } else {
-              value = src[key];
-            }
+            value += (key === 'style' ? ';' : ' ') + src[key];
           }
           dst.$set(key, value, true, srcAttr[key]);
         }
@@ -3140,11 +3113,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
               childBoundTranscludeFn);
           }
           linkQueue = null;
-        }).catch(function(error) {
-          if (error instanceof Error) {
-            $exceptionHandler(error);
-          }
-        }).catch(noop);
+        });
 
       return function delayedNodeLinkFn(ignoreChildLinkFn, scope, node, rootElement, boundTranscludeFn) {
         var childBoundTranscludeFn = boundTranscludeFn;
@@ -3244,9 +3213,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         }
       // maction[xlink:href] can source SVG.  It's not limited to <maction>.
       } else if (attrNormalizedName === 'xlinkHref' ||
-          (tag === 'form' && attrNormalizedName === 'action') ||
-          // links can be stylesheets or imports, which can run script in the current origin
-          (tag === 'link' && attrNormalizedName === 'href')
+          (tag === 'form' && attrNormalizedName === 'action')
       ) {
         return $sce.RESOURCE_URL;
       }
@@ -3269,18 +3236,18 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
             startingTag(node));
       }
 
-      if (EVENT_HANDLER_ATTR_REGEXP.test(name)) {
-        throw $compileMinErr('nodomevents',
-            'Interpolations for HTML DOM event attributes are disallowed.  Please use the ' +
-                'ng- versions (such as ng-click instead of onclick) instead.');
-      }
-
       directives.push({
         priority: 100,
         compile: function() {
             return {
               pre: function attrInterpolatePreLinkFn(scope, element, attr) {
                 var $$observers = (attr.$$observers || (attr.$$observers = createMap()));
+
+                if (EVENT_HANDLER_ATTR_REGEXP.test(name)) {
+                  throw $compileMinErr('nodomevents',
+                      'Interpolations for HTML DOM event attributes are disallowed.  Please use the ' +
+                          'ng- versions (such as ng-click instead of onclick) instead.');
+                }
 
                 // If the attribute has changed since last $interpolate()ed
                 var newValue = attr[name];
@@ -3590,16 +3557,12 @@ SimpleChange.prototype.isFirstChange = function() { return this.previousValue ==
 
 
 var PREFIX_REGEXP = /^((?:x|data)[:\-_])/i;
-var SPECIAL_CHARS_REGEXP = /[:\-_]+(.)/g;
-
 /**
  * Converts all accepted directives format into proper directive name.
  * @param name Name to normalize
  */
 function directiveNormalize(name) {
-  return name
-    .replace(PREFIX_REGEXP, '')
-    .replace(SPECIAL_CHARS_REGEXP, fnCamelCaseReplace);
+  return camelCase(name.replace(PREFIX_REGEXP, ''));
 }
 
 /**

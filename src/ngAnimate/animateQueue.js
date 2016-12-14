@@ -102,10 +102,8 @@ var $$AnimateQueueProvider = ['$animateProvider', /** @this */ function($animate
 
   this.$get = ['$$rAF', '$rootScope', '$rootElement', '$document', '$$HashMap',
                '$$animation', '$$AnimateRunner', '$templateRequest', '$$jqLite', '$$forceReflow',
-               '$$isDocumentHidden',
        function($$rAF,   $rootScope,   $rootElement,   $document,   $$HashMap,
-                $$animation,   $$AnimateRunner,   $templateRequest,   $$jqLite,   $$forceReflow,
-                $$isDocumentHidden) {
+                $$animation,   $$AnimateRunner,   $templateRequest,   $$jqLite,   $$forceReflow) {
 
     var activeAnimationsLookup = new $$HashMap();
     var disabledElementsLookup = new $$HashMap();
@@ -359,7 +357,7 @@ var $$AnimateQueueProvider = ['$animateProvider', /** @this */ function($animate
         return runner;
       }
 
-      var className = [node.getAttribute('class'), options.addClass, options.removeClass].join(' ');
+      var className = [node.className, options.addClass, options.removeClass].join(' ');
       if (!isAnimatableClassName(className)) {
         close();
         return runner;
@@ -367,7 +365,7 @@ var $$AnimateQueueProvider = ['$animateProvider', /** @this */ function($animate
 
       var isStructural = ['enter', 'move', 'leave'].indexOf(event) >= 0;
 
-      var documentHidden = $$isDocumentHidden();
+      var documentHidden = $document[0].hidden;
 
       // this is a hard disable of all animations for the application or on
       // the element itself, therefore  there is no need to continue further
